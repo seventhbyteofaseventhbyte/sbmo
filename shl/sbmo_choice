@@ -1,0 +1,130 @@
+#!/bin/bash
+
+stty -echo
+
+arg_count=-1
+for a in $@
+do
+  (( arg_count++ ))
+  echo "#### $a $arg_count####"
+  myoptions[$arg_count]="$a"
+done
+# annuler
+(( arg_count++ ))
+myoptions[$arg_count]="Annuler"
+# valider
+(( arg_count++ ))
+myoptions[$arg_count]="Valider"
+#sortie
+sortie=""
+
+num_myoptions=${#myoptions[@]}  # Nombre total d'options
+cursor_runner=0
+
+undone=true
+
+for i in "${!myoptions[@]}"
+do
+  if (( i < ( num_myoptions - 2 ) ))
+  then
+    selected[$i]=1
+  else
+    selected[$i]=2
+  fi
+done
+
+# Fonction pour afficher les choix avec l'option sélectionnée
+display_myoptions() {
+  clear
+  for i in "${!myoptions[@]}"
+  do
+    if [[ "$cursor_runner" == "$i" ]]
+    then
+      echo -ne "\033[0m>"
+    else
+      echo -ne "\033[0m "
+    fi
+    if (( ${selected[$i]} == 1 ))
+    then
+      echo -ne "\033[1;32m [×]"
+    elif (( ${selected[$i]} == 0 ))
+    then
+      echo -ne "\033[1;32m [ ]"
+    fi
+    if (( ${selected[$i]} == 2 ))
+    then
+      echo -ne "\033[1;31m    "
+    fi
+    echo -ne "  ${myoptions[$i]}"
+    if (( ${selected[$i]} == 1 ))
+    then
+      echo -ne "\033[0m"
+    fi
+      echo -ne "\n"
+  done
+}
+
+# Boucle pour capturer les entrées clavier et gérer les choix
+while IFS="" $undone
+do
+
+  display_myoptions
+
+  read -n 1 key
+
+  if [[ $key == $'\e' ]]
+  then
+    read -n 2 key
+    case "$key" in
+    '[B')
+      if (( cursor_runner == ( num_myoptions - 1 ) ))
+      then
+        cursor_runner=0
+      else
+        (( cursor_runner++ ))
+      fi
+      ;;
+    '[A')
+      if (( cursor_runner == 0 ))
+      then
+        (( cursor_runner=num_myoptions ))
+        (( cursor_runner-- ))
+      else
+        (( cursor_runner-- ))
+      fi
+      ;;
+    esac
+  else
+    if [[ "${selected[$cursor_runner]}" == "1" ]]
+    then
+      selected[$cursor_runner]=0
+    elif [[ "${selected[$cursor_runner]}" == "2" ]]
+    then
+      if (( cursor_runner == ( num_myoptions - 1 ) ))
+      then
+        sortie=valider
+        undone=false
+      elif (( cursor_runner == ( num_myoptions - 2 ) ))
+      then
+        sortie=annuler
+        undone=false
+      fi
+    else
+      selected[$cursor_runner]=1
+    fi
+  fi
+done
+
+stty echo
+echo -ne "\033[0m"
+
+if [[ "$sortie" == "valider" ]]
+then
+  for i in "${!myoptions[@]}"
+  do
+    if (( ${selected[$i]} == 1 ))
+    then
+      echo -ne "$i "
+    fi
+  done
+fi
